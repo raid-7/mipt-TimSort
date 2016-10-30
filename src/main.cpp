@@ -58,9 +58,11 @@ Point pointAllocator(unsigned long long random) {
 		rnd1 = random & 0xFFFF,
 		rnd2 = (random >> 16) & 0xFFFF,
 		rnd3 = (random >> 32) & 0xFFFF;
+
 	return Point(doubleAllocator(rnd1), doubleAllocator(rnd2), doubleAllocator(rnd3));
 }
 
+// Sort with distance to pivot
 class PointComparator {
 private:
 	Point pivot;

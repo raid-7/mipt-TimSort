@@ -149,7 +149,8 @@ private:
 		// make decomposition
 		RunController** blocks = new RunController*[blocksCount];
 		for (unsigned int i = 0; i < blocksCount; ++i) {
-			blocks[i] = RunController::getUnsortedRunPointer(b + blockSize * i, std::min(e, b + blockSize * (i + 1)), *this);
+			blocks[i] = RunController::getUnsortedRunPointer(
+						b + blockSize * i, std::min(e, b + blockSize * (i + 1)), *this);
 			if (blocks[i]->begin() <= m && blocks[i]->end() > m) {
 				yellowId = i;
 			}
@@ -187,16 +188,16 @@ private:
 
 		// iterative merge
 		SortIterator buf = e - s;
-		SortIterator gamaIterator = buf;
-		SortIterator betaIterator = gamaIterator - s;
+		SortIterator gammaIterator = buf;
+		SortIterator betaIterator = gammaIterator - s;
 		SortIterator alphaIterator = betaIterator - s;
 		while (betaIterator > b) {
 			if (alphaIterator < b)
 				alphaIterator = b;
 
-			simpleMerge(alphaIterator, betaIterator, betaIterator, gamaIterator, buf);
+			simpleMerge(alphaIterator, betaIterator, betaIterator, gammaIterator, buf);
 
-			gamaIterator = betaIterator;
+			gammaIterator = betaIterator;
 			betaIterator = alphaIterator;
 			alphaIterator -= s;
 		}
@@ -274,7 +275,7 @@ private:
 		while (l < r) {
 			unsigned int m = (l + r) >> 1;
 			if (comparator(b[m], *pivot) == expectedComparison) {
-				l = m+1;
+				l = m + 1;
 			} else {
 				r = m;
 			}
@@ -315,7 +316,8 @@ private:
 		}
 
 		void coutRun() const {
-			std::cout << "Run[" << _begin - parentController.begin << ", " << _end - parentController.begin << ")=" << size() << ";\n";
+			std::cout << "Run[" << _begin - parentController.begin <<
+						", " << _end - parentController.begin << ")=" << size() << ";\n";
 		}
 		void coutRunContent() const {
 			coutRun();
@@ -418,9 +420,9 @@ public:
 		TimSortController controller(begin, end, comparator, params);
 		controller.sort();
 	}
+
 	static void sort(SortIterator begin, SortIterator end,
 			const ITimSortParams& params = DefaultTimSortParams()) {
-
 		sort(begin, end, Comparator(), params);
 	}
 };
