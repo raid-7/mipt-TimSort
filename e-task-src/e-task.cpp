@@ -1,9 +1,26 @@
+// https://github.com/raid-7/mipt-TimSort
+
 #include <stack>
 #include <cmath>
 #include <iterator>
 #include <typeinfo>
+#include <iostream>
 
+enum EWhatMerge {
+	WM_NoMerge,
+	WM_MergeXY,
+	WM_MergeYZ
+};
 
+class ITimSortParams {
+public:
+	virtual unsigned int minRun(unsigned int n) const = 0;
+	virtual bool needMerge(unsigned int lenX, unsigned int lenY) const = 0;
+	virtual EWhatMerge whatMerge(unsigned int lenX, unsigned int lenY, unsigned int lenZ) const = 0;
+	virtual unsigned int GetGallop() const = 0;
+
+	virtual ~ITimSortParams() {};
+};
 
 class DefaultTimSortParams: public ITimSortParams {
 public:
@@ -112,17 +129,6 @@ private:
 			}
 		}
 
-//		std::stack<RunController> tmp;
-//		while (!runStack.empty()) {
-//			RunController rc = popRun();
-//			std::cout << rc.size() << ' ';
-//			tmp.push(rc);
-//		}
-//		while (!tmp.empty()) {
-//			pushRun(tmp.top());
-//			tmp.pop();
-//		}
-//		std::cout << '\n';
 	}
 
 	void mergeRuns(RunController& x, RunController& y) const {
@@ -143,8 +149,6 @@ private:
 			return;
 		}
 
-//		RunController::getUnsortedRunPointer(b, m, *this)->coutRunContent();
-//		RunController::getUnsortedRunPointer(m, e, *this)->coutRunContent();
 
 		// make decomposition
 		RunController** blocks = new RunController*[blocksCount];
@@ -244,7 +248,7 @@ private:
 						unsigned int needCopies = comparison ?
 									findCopiesCount(itMain1, itBuf, itMain2, true) :
 									findCopiesCount(itMain2, e2, itMain1, true);
-//						std::cout << needCopies << ' ' << (comparison ? itBuf - itMain1 : e2 - itMain2) << '\n';
+
 						while (needCopies && --needCopies) {
 							swapIterators(itRes++, comparison ? itMain1++ : itMain2++);
 						}
@@ -315,18 +319,6 @@ private:
 			return _end;
 		}
 
-//		void coutRun() const {
-//			std::cout << "Run[" << _begin - parentController.begin <<
-//						", " << _end - parentController.begin << ")=" << size() << ";\n";
-//		}
-//		void coutRunContent() const {
-//			coutRun();
-//			for (SortIterator it = _begin; it < _end; ++it) {
-//				std::cout << ' ' << *it;
-//			}
-//			std::cout << '\n';
-//		}
-
 	private:
 		RunController(SortIterator begin, SortIterator end,
 				const TimSortController<SortIterator, Comparator>& parentController)
@@ -337,7 +329,6 @@ private:
 			for (SortIterator it = _begin + 1; it < _end; ++it) {
 				SortIterator t = it;
 				Value v = *it;
-//				std::cout << typeid(v).name() << "]]]\n";
 				while (t > _begin && !parentController.comparator(t[-1], v)) {
 					*t = *(t-1);
 					--t;
@@ -426,3 +417,112 @@ public:
 		sort(begin, end, Comparator(), params);
 	}
 };
+
+
+
+template <class RandomAccessIterator, class Compare>
+void TimSort(RandomAccessIterator first, RandomAccessIterator last,
+			const Compare& comp, const ITimSortParams& params) {
+
+	TimSortController<RandomAccessIterator, Compare>::sort(first, last, comp, params);
+}
+
+template <class RandomAccessIterator, class Compare>
+void TimSort(RandomAccessIterator first, RandomAccessIterator last, const Compare& comp) {
+	TimSortController<RandomAccessIterator, Compare>::sort(first, last, comp);
+}
+
+template <class RandomAccessIterator>
+void TimSort(RandomAccessIterator first, RandomAccessIterator last, const ITimSortParams& params) {
+	TimSortController<RandomAccessIterator>::sort(first, last, params);
+}
+
+template <class RandomAccessIterator>
+void TimSort(RandomAccessIterator first, RandomAccessIterator last) {
+	TimSortController<RandomAccessIterator>::sort(first, last);
+}
+
+
+
+
+
+struct Footballer {
+    int id;
+    unsigned long long value;
+
+    Footballer()
+        :id(0), value(0)
+    {}
+    Footballer(int i, int v)
+        :id(i), value(v)
+    {}
+};
+
+
+unsigned long long getSum(int l, int r, const unsigned long long* const subsums) {
+    return subsums[r] - (l == 0 ? 0ULL : subsums[l - 1]);
+}
+
+bool idComparator(const Footballer& a, const Footballer& b) {
+    return a.id < b.id;
+}
+bool valueComparator(const Footballer& a, const Footballer& b) {
+    return a.value < b.value;
+}
+
+int main() {
+	const int MAX_LEN = 100007;
+
+    int n;
+    Footballer a[MAX_LEN];
+
+    std::cin >> n;
+
+    for (int i = 0; i < n; ++i) {
+        int x;
+        std::cin >> x;
+        a[i] = Footballer(i, x);
+    }
+
+
+    TimSort(a, a + n, valueComparator);
+
+    unsigned long long subsums[MAX_LEN];
+
+    for (int i = 0; i < n; ++i) {
+        subsums[i] = (i == 0 ? 0ULL : subsums[i - 1]) + a[i].value;
+    }
+
+    unsigned long long best = 0;
+    int bestL = 0, bestR = -1;
+
+    int l = 0, r = 0;
+    while (l < n && r < n) {
+        while (r < n && (r - l <= 1 || a[l].value + a[l + 1].value >= a[r].value)) {
+            ++r;
+        }
+        if (r == n || a[l].value + a[l + 1].value < a[r].value)
+            --r;
+        unsigned long long tSum = getSum(l, r, subsums);
+        if (tSum > best) {
+            best = tSum;
+            bestL = l;
+            bestR = r;
+        }
+        ++l;
+    }
+
+    std::cout << best << '\n';
+    if (bestR > 0) {
+        TimSort(a + bestL, a + bestR + 1, idComparator);
+        for (Footballer* it = a + bestL; it <= a + bestR; ++it) {
+        	std::cout << it->id + 1 << ' ';
+        }
+    } else if (n == 1) {
+        std::cout << 1;
+    }
+    std::cout << '\n';
+
+    return 0;
+}
+

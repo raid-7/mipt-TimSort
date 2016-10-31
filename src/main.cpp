@@ -348,4 +348,6 @@ int main() {
 	testTimParams();
 	testStrings();
 	testPoints();
+
+	return 0;
 }
