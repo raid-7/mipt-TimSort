@@ -143,10 +143,24 @@ private:
 			return;
 		}
 
-//		RunController::getUnsortedRunPointer(b, m, *this)->coutRunContent();
-//		RunController::getUnsortedRunPointer(m, e, *this)->coutRunContent();
+		RunController** blocks = inplaceMergeMakeDecomposition(b, m, e, blocksCount, blockSize, yellowId);
+		inplaceMergeSortOfBlocks(blocks, yellowId);
+		inplaceMergeMergeNeighbours(blocks, yellowId);
 
-		// make decomposition
+		unsigned int s = blocks[blocksCount - 1]->size() + blocks[yellowId]->size();
+		RunController::makeRun(e - s * 2, e, e, *this);
+
+		SortIterator buf = inplaceMergeFinalIterativeMerge(b, m, e, s);
+
+		RunController::makeRun(buf, e, e, *this);
+
+		for (unsigned int i = 0; i < blocksCount; ++i)
+			delete blocks[i];
+		delete[] blocks;
+	}
+
+	RunController** inplaceMergeMakeDecomposition(SortIterator b, SortIterator m, SortIterator e,
+			unsigned int blocksCount, unsigned int blockSize, unsigned int& yellowId) {
 		RunController** blocks = new RunController*[blocksCount];
 		for (unsigned int i = 0; i < blocksCount; ++i) {
 			blocks[i] = RunController::getUnsortedRunPointer(
@@ -157,8 +171,10 @@ private:
 		}
 		RunController::swapRuns(*(blocks[yellowId]), *(blocks[blocksCount - 2]));
 		yellowId = blocksCount - 2;
+		return blocks;
+	}
 
-		// selection sort of blocks
+	void inplaceMergeSortOfBlocks(RunController** blocks, unsigned int yellowId) {
 		for (unsigned int i = 0; i < yellowId; ++i) {
 			unsigned int minRun = i;
 			SortIterator minIt = blocks[minRun]->begin();
@@ -174,19 +190,17 @@ private:
 			if (minRun != i)
 				RunController::swapRuns(*blocks[i], *blocks[minRun]);
 		}
+	}
 
-		// merge neighbour blocks without join
-		for (unsigned int i = 0; i < yellowId-1; ++i) {
+	void inplaceMergeMergeNeighbours(RunController** blocks, unsigned int yellowId) {
+		for (unsigned int i = 0; i + 1 < yellowId; ++i) {
 			RunController* x = blocks[i];
 			RunController* y = blocks[i + 1];
 			simpleMerge(x->begin(), x->end(), y->begin(), y->end(), blocks[yellowId]->begin());
 		}
+	}
 
-		unsigned int s = blocks[blocksCount - 1]->size() + blocks[yellowId]->size();
-		RunController::makeRun(e - s * 2, e, e, *this);
-
-
-		// iterative merge
+	SortIterator inplaceMergeFinalIterativeMerge(SortIterator b, SortIterator e, unsigned int s) {
 		SortIterator buf = e - s;
 		SortIterator gammaIterator = buf;
 		SortIterator betaIterator = gammaIterator - s;
@@ -201,14 +215,8 @@ private:
 			betaIterator = alphaIterator;
 			alphaIterator -= s;
 		}
-
-		// sort buffer (tail with length s)
-		RunController::makeRun(buf, e, e, *this);
-
-		for (unsigned int i = 0; i < blocksCount; ++i)
-			delete blocks[i];
-		delete[] blocks;
 	}
+
 
 	void simpleMerge(const SortIterator& b1, const SortIterator& e1,
 				const SortIterator& b2, const SortIterator& e2, const SortIterator& buffer) const {
@@ -244,7 +252,6 @@ private:
 						unsigned int needCopies = comparison ?
 									findCopiesCount(itMain1, itBuf, itMain2, true) :
 									findCopiesCount(itMain2, e2, itMain1, true);
-//						std::cout << needCopies << ' ' << (comparison ? itBuf - itMain1 : e2 - itMain2) << '\n';
 						while (needCopies && --needCopies) {
 							swapIterators(itRes++, comparison ? itMain1++ : itMain2++);
 						}
